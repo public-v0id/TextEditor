@@ -1,4 +1,5 @@
 #include "string.h"
+#include "stringlist.h"
 #include <errno.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -19,7 +20,25 @@ void tryClosing(FILE *f, char* filename) {
 	}
 }
 
+int saveFile(char* name, stringlist* list) {
+	if (access(name, F_OK) == 0 && rename(name, "oldtext.tmp") != 0) {
+		return -1;
+	}
+	FILE *tmp = fopen(name, "w");
+	size_t wr = writeList(list, tmp);
+	if (wr != 0) {
+		remove(name);
+		if (access("oldtext.tmp", F_OK) == 0) {
+			rename("oldtext.tmp", name);
+		}
+		return -1;
+	}
+	remove("oldtext.tmp");
+	return 0;
+}
+
 enum inputMode {
+	BASIC,
 	COMMAND,
 	TEXT	
 };
@@ -30,171 +49,215 @@ int main(int argc, char** argv) {
 		return 0;	
 	}
 	for (int i = 1; i < argc; ++i) {
-		FILE *f = fopen(argv[i], "a+");
-		if (f == NULL) {
-			fprintf(stderr, "Unable to open file %s\n", argv[i]);
-			continue;
-		}
-		fseek(f, 0, SEEK_END);
-		size_t fSize = ftell(f);
-		size_t bufSize = pow2(fSize);
-		rewind(f);
-		string* buffer = constructor(bufSize);
-		if (buffer == NULL) {
-			fprintf(stderr, "Unable to allocate memory for opening file %s!\n", argv[i]);
+		FILE *f = fopen(argv[i], "r+");
+		stringlist* list;
+		if (f != NULL) {	
+			list = listConstructor(f);
 			tryClosing(f, argv[i]);
-			continue;
-		}	
-		size_t dataRead = fread(buffer->data, sizeof(char), fSize, f);
-		if (dataRead != fSize) {
-			fprintf(stderr, "Error reading file %s!\n", argv[i]);
-			destructor(buffer);
-			tryClosing(f, argv[i]);
-			continue;
 		}
-		setSize(buffer);
+		else {
+			list = listSingleConstructor(1);
+			if (list == NULL) {
+				fprintf(stderr, "Error! Couldn't create file");
+			}
+		}
 		initscr();
-		enum inputMode im = COMMAND;
+		enum inputMode im = BASIC;
 		bool active = true;
 		int row, col, curR = 0, curC = 0;
-		size_t curSym = 0;
+		stringlist* curLine = list;
+		stringlist* topLine = list;
+		size_t curSym = 0, curW = 0;
+		int curNum = 0;
+		string* command = constructor(6);
+		size_t comSymb = 0;
+		bool changed = false;
 		while (active) {
 			getmaxyx(stdscr, row, col);
+			col += 0;
 			move(0, 0);
-			printw(buffer->data);
-			refresh();
+			erase(); 
+			stringlist* iter = topLine;
+			int rowsPrinted = 0;
+			int num = 0;
+			while (iter != NULL && rowsPrinted < row-1) {
+				printw(iter->str->data);
+				rowsPrinted += (iter->str->size+col-1)/col;
+				iter = iter->next;
+			}
+			iter = list;
+			while (iter != curLine) {
+				iter = iter->next;
+				num++;
+			}
+			{
+				char* emptybuf = malloc(col+1*sizeof(char));
+				for (int i = 0; i < col; ++i) {
+					emptybuf[i] = ' ';
+				}
+				move(row-1, 0);
+				printw(emptybuf);
+			}
+			move(row-1, 0);
+			printw(command->data);
+			move(row-1, col/2);
+			char numStr[20];
+			sprintf(numStr, "%d", num);
+			printw(numStr);
+			move(curR, curC);
+			refresh();	
 			switch (im) {
+				case BASIC: {
+					noecho();
+					int ch = getch();
+					if ((char)ch == 'i') {
+						im = TEXT;
+						continue;
+					}
+					if ((char)ch == ':') {
+						im = COMMAND;
+						continue;
+					}
+					break;
+				}
 				case COMMAND: {
-					echo();	
-					move(row-1, 0);
-					int ch = getch();	
-					switch (ch) {
-						case 'q':
-							active = false;
-							break;
-						case 'w':	
-							if (rename(argv[i], "oldtext.tmp") != 0) {
-								move(row-1, 0);
-								printw("Error writing data!");
-								break;
+					noecho();
+					keypad(stdscr, TRUE);
+					int ch = getch();
+					if (ch == 27) {
+						im = BASIC;
+						continue;
+					}
+					if (ch == 263 && comSymb > 0) {
+						backspace(command, comSymb);
+						comSymb--;	
+						continue;
+					}
+					if (ch == 10) {
+						for (size_t j = 0; j < comSymb; ++j) {
+							if (command->data[j] == 'w') {
+								saveFile(argv[i], list);
+								changed = false;
 							}
-							FILE *tmp = fopen(argv[i], "w");
-							size_t wr = fwrite(buffer->data, sizeof(char), buffer->size, tmp);
-							if (wr != buffer->size) {
-								move(row-1, 0);
-								printw("Error writing data!");
-								remove(argv[i]);
-								rename("oldtext.tmp", argv[i]);
-								break;
+							else if (command->data[j] == 'q' && j < comSymb-1 && command->data[j+1] == '!') {
+								active = false;
 							}
-							remove("oldtext.tmp");
-							break;
-						case 'i':
-							im = TEXT;
-							break;
+							else if (command->data[j] == 'q' && !changed) {
+								active = false;
+							}
+							command->data[j] = 0;
+						}
+						comSymb = 0;
+						continue;
+					}
+					if (ch > 0 && ch < 256) {
+						append(command, (char)ch, comSymb);
+						comSymb++;
+						continue;
 					}
 					break;
 				}
 				case TEXT: {
+					curR = 0;
+					iter = topLine;
+					while (iter != curLine && iter->next != NULL) {
+						curR += (iter->str->width+col-1)/col;
+						iter = iter->next;
+					}
+					curR += curW/col;
+					curC = curW%col;
 					move(curR, curC);
 					keypad(stdscr, TRUE);
 					noecho();
 					int ch = getch();
 					if (ch == KEY_LEFT && curSym > 0) {
 						curSym--;
-						curC--;
-						if (curC < 0) {
-							curC += col;
-							if (buffer->data[curSym] == '\n') {
-								size_t strlen = curSym-prevNL(buffer, curSym-1);
-								curC = strlen%col;
-							}
-							curR--;
+						if (curLine->str->data[curSym] == '\t') {
+							curW = getCurWidth(curLine->str, curSym);
+						}
+						else {
+							curW--;
 						}
 						continue;
 					}
-					if (ch == KEY_RIGHT && curSym < buffer->size && buffer->data[curSym] != 0) {
-						curC++;
-						if (buffer->data[curSym] == '\n') {
-							curC = 0;
-							curR++;
+					if (ch == KEY_RIGHT && curSym < curLine->str->size && curLine->str->data[curSym] != '\n') {
+						if (curLine->str->data[curSym] == '\t') {
+							curW += 8-(curW&7);
 						}
-						if (curC >= col) {
-							curC -= col;
-							curR++;
+						else {
+							++curW;
 						}
 						curSym++;
 						continue;
 					}
-					if (ch == KEY_UP && curSym > 0) {
-						size_t nl = prevNL(buffer, curSym-1);
-						size_t strlen = curSym-nl;
-						curSym = nl;
-						if (curR > 0) {
-							curR -= (strlen+col-1)/col;
+					if (ch == KEY_UP && curLine->prev != NULL) {
+						curLine = curLine->prev;
+						curNum--;
+						if (curSym > curLine->str->size-1) {
+							curSym = curLine->str->size-1;
 						}
-						if (curSym == 0) {
-							curC = 0;
-							continue;
+						if (curW > curLine->str->width-1) {
+							curW = curLine->str->width-1;
+						}	
+						if (curR == 0) {
+							topLine = curLine;
 						}
-						nl = prevNL(buffer, curSym-1);
-						strlen = curSym-nl-(buffer->data[nl] == '\n' ? 1 : 0);
-						curC = strlen%col;
 						continue;
 					}
-					if (ch == KEY_DOWN && curSym < buffer->size && buffer->data[curSym] != 0) {
-						size_t nl = nextNL(buffer, curSym+1);
-						size_t strlen = nl-curSym;
-						curSym = nl;
-						curC = 0;
-						if (buffer->data[curSym] == 0) {
-							size_t pnl = prevNL(buffer, curSym-1);
-							curC = (curSym-pnl-1)%col;
+					if (ch == KEY_DOWN && curLine->next != NULL) {
+						curLine = curLine->next;
+						curNum++;
+						if (curSym > curLine->str->size-1) {
+							curSym = curLine->str->size-1;
 						}
-						curR += (strlen+col-1)/col;
+						if (curW > curLine->str->width-1) {
+							curW = curLine->str->width-1;
+						}	
+						if (curR > row-5) {
+							topLine = topLine->next;
+						}
+						continue;
+					}
+					if (ch == 263 && (curSym > 0 || curLine->prev != NULL)) {
+						changed = true;
+						if (curSym > 0) {
+							backspace(curLine->str, curSym);
+							curSym--;
+							curW = getCurWidth(curLine->str, curSym);
+							continue;
+						}
+						curSym = curLine->prev->str->size-1;
+						curW = curLine->prev->str->width-1;
+						curLine = removeAndMergeLines(curLine);
 						continue;
 					}
 					if (ch == 27) {
-						im = COMMAND;
+						im = BASIC;
 						continue;
 					}
-					if (ch == 263 && curSym > 0) {
-						backspace(buffer, curSym);
-						curC--;
-						curSym--;
-						if (curC < 0) {
-							curC += col;
-							if (buffer->data[curSym] == '\n') {
-								size_t strlen = curSym-prevNL(buffer, curSym-1);
-								curC = strlen%col;
-							}
-							curR--;
-						}
+					if (ch == 10) {
+						curLine = createAfter(curLine, curSym);
+						curSym = 0;
+						curW = 0;
+						changed = true;
 						continue;
 					}
 					if (ch >= 0 && ch < 256) {
-						append(buffer, (char)ch, curSym);
+						append(curLine->str, (char)ch, curSym);
 						++curSym;
-						if (ch == 10) {
-							curC = 0;
-							++curR;
-							continue;
+						changed = true;
+						if (ch == '\t') {
+							curW += 8-(curW&7);
 						}
-						++curC;
-						if (ch == 9) {
-							curC += (8-curC%8);
-						}
-						if (curC >= col) {
-							curC -= col;
-							curR++;
+						else {
+							++curW;
 						}
 						continue;
-					}	
+					}
 				}
 			}
-		}
+		}	
 		endwin();
-		destructor(buffer);
-		tryClosing(f, argv[i]);
+		slDestructor(list);
 	}
 }

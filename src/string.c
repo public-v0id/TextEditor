@@ -3,6 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+void setWidth(string* s) {
+	s->width = 0;
+	for (size_t i = 0; i < s->size; ++i) {
+		if (s->data[i] == '\t') {
+			s->width += 8-(s->width&7);
+		}
+		s->width++;
+	}
+}
+
 string* constructor(size_t sz) {
 	string* s = malloc(sizeof(string));
 	s->data = calloc(sz, sizeof(char));
@@ -10,6 +20,8 @@ string* constructor(size_t sz) {
 		return NULL;
 	}
 	s->capacity = sz;
+	s->size = 0;
+	s->width = 0;
 	return s;
 }
 
@@ -22,10 +34,22 @@ void destructor(string* s) {
 
 void setSize(string* s) {
 	if (s->data[s->capacity-1] == 0) {
-		s->size = strlen(s->data);
+		s->size = strsize(s->data, s->capacity);
+//		s->size = strlen(s->data);
+		setWidth(s);
 		return;
 	}
 	s->size = s->capacity;
+	setWidth(s);	
+}
+
+int setSizeImm(string* s, size_t sz) {
+	if (sz > s->capacity) {
+		return -1;
+	}
+	s->size = sz;
+	setWidth(s);	
+	return 0;
 }
 
 int append(string* s, char c, size_t symb) {
@@ -57,6 +81,11 @@ int append(string* s, char c, size_t symb) {
 	}
 	s->data[symb] = c;
 	++(s->size);
+	if (c == '\t') {
+		s->width += 8-(s->width&7);
+		return 0;
+	}
+	s->width++;
 	return 0;
 }
 
@@ -64,7 +93,7 @@ void backspace(string* s, size_t symb) {
 	for (size_t i = symb; i < s->size; ++i) {
 		s->data[i-1] = s->data[i];
 	}
-	s->size--;
+	s->size--;	
 	s->data[s->size] = 0;
 }
 
@@ -83,4 +112,29 @@ size_t nextNL(string* c, size_t cur) {
 		++cur;
 	}
 	return cur;
+}
+
+size_t strsize(char* str, size_t buflen) {
+	size_t l = 0, r = buflen-1, cur = 0;
+	while (l < r-1) {
+		cur = (l+r)>>1;
+		if (str[cur] > 0) {
+			l = cur;
+		}
+		else {
+			r = cur;
+		}
+	}
+	return str[cur] == 0 ? cur : cur+1;
+}	
+
+size_t getCurWidth(string* s, size_t symb) {
+	size_t w = 0;
+	for (size_t i = 0; i < symb; ++i) {
+		if (s->data[i] == '\t') {
+			w += 8-(w&7);
+		}
+		w++;
+	}
+	return w;
 }

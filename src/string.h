@@ -6,6 +6,7 @@ typedef struct {
 	char* data;
 	size_t size;
 	size_t capacity;
+	size_t width;
 } string;
 
 enum strError {
@@ -19,6 +20,8 @@ void destructor(string* s);
 
 void setSize(string* s);
 
+int setSizeImm(string* s, size_t sz);
+
 int append(string* s, char c, size_t symb);
 
 size_t prevNL(string* c, size_t cur);
@@ -26,4 +29,8 @@ size_t prevNL(string* c, size_t cur);
 size_t nextNL(string* c, size_t cur);
 
 void backspace(string* s, size_t symb);
+
+size_t strsize(char* str, size_t buflen);
+
+size_t getCurWidth(string* s, size_t symb);
 #endif

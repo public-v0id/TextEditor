@@ -134,7 +134,9 @@ size_t getCurWidth(string* s, size_t symb) {
 		if (s->data[i] == '\t') {
 			w += 8-(w&7);
 		}
-		w++;
+		else {
+			w++;
+		}
 	}
 	return w;
 }

@@ -195,10 +195,11 @@ int main(int argc, char** argv) {
 						curNum--;
 						if (curSym > curLine->str->size-1) {
 							curSym = curLine->str->size-1;
-						}
+						}/*
 						if (curW > curLine->str->width-1) {
 							curW = curLine->str->width-1;
-						}	
+						}*/
+						curW = getCurWidth(curLine->str, curSym);	
 						if (curR == 0) {
 							topLine = curLine;
 						}
@@ -209,10 +210,11 @@ int main(int argc, char** argv) {
 						curNum++;
 						if (curSym > curLine->str->size-1) {
 							curSym = curLine->str->size-1;
-						}
+						} /*
 						if (curW > curLine->str->width-1) {
 							curW = curLine->str->width-1;
-						}	
+						} */
+						curW = getCurWidth(curLine->str, curSym);
 						if (curR > row-5) {
 							topLine = topLine->next;
 						}

@@ -33,4 +33,6 @@ void backspace(string* s, size_t symb);
 size_t strsize(char* str, size_t buflen);
 
 size_t getCurWidth(string* s, size_t symb);
+
+size_t print_format(string* s, char** buf);
 #endif

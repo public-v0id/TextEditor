@@ -1,6 +1,7 @@
 #include "stringlist.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #define MAX_INT 0x7FFFFFFF
 
 stringlist* listSingleConstructor(size_t sz) {

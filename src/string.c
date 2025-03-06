@@ -140,3 +140,28 @@ size_t getCurWidth(string* s, size_t symb) {
 	}
 	return w;
 }
+
+size_t print_format(string* s, char** buf) {
+	size_t bufsize = (s->size+1)<<1;
+	*buf = calloc(bufsize, sizeof(char));
+	if (*buf == NULL) {
+		printf("Unable to allocate\n");
+		return 0;
+	}
+	size_t cur = 0;
+	for (int i = 0; i < s->size; ++i) {
+		(*buf)[cur] = s->data[i];
+		if ((*buf)[cur] == '%') {
+			++cur;
+			if (cur >= bufsize) {
+				return cur;
+			}
+			(*buf)[cur] = '%';
+		}
+		++cur;
+		if (cur >= bufsize) {
+			return cur;
+		}
+	}
+	return cur;
+}

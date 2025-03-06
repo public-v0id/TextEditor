@@ -81,7 +81,12 @@ int main(int argc, char** argv) {
 			int rowsPrinted = 0;
 			int num = 0;
 			while (iter != NULL && rowsPrinted < row-1) {
-				printw(iter->str->data);
+				char* prbuf = NULL;
+				print_format(iter->str, &prbuf);
+				printw(prbuf);
+				if (prbuf != NULL) {
+					free(prbuf);
+				}
 				rowsPrinted += (iter->str->size+col-1)/col;
 				iter = iter->next;
 			}
@@ -208,8 +213,8 @@ int main(int argc, char** argv) {
 					if (ch == KEY_DOWN && curLine->next != NULL) {
 						curLine = curLine->next;
 						curNum++;
-						if (curSym > curLine->str->size-1) {
-							curSym = curLine->str->size-1;
+						if (curSym > curLine->str->size) {
+							curSym = curLine->str->size;
 						} /*
 						if (curW > curLine->str->width-1) {
 							curW = curLine->str->width-1;

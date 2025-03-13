@@ -9,7 +9,10 @@ void setWidth(string* s) {
 		if (s->data[i] == '\t') {
 			s->width += 8-(s->width&7);
 		}
-		s->width++;
+		else {
+			s->width++;
+		}
+		//printf("symbol %d width %ld\n", s->data[i], s->width);
 	}
 }
 
@@ -93,7 +96,17 @@ void backspace(string* s, size_t symb) {
 	for (size_t i = symb; i < s->size; ++i) {
 		s->data[i-1] = s->data[i];
 	}
-	s->size--;	
+	s->size--;
+	setWidth(s);	
+	s->data[s->size] = 0;
+}
+
+void delete(string* s, size_t symb) {
+	for (size_t i = symb+1; i < s->size; ++i) {
+		s->data[i-1] = s->data[i];
+	}
+	s->size--;
+	setWidth(s);	
 	s->data[s->size] = 0;
 }
 
@@ -136,9 +149,25 @@ size_t getCurWidth(string* s, size_t symb) {
 		}
 		else {
 			w++;
-		}
+		}	
 	}
 	return w;
+}
+
+size_t getCurSym(string* s, size_t w) {
+	size_t w_cur = 0;
+	for (size_t i = 0; i <= s->size; ++i) {
+		if (s->data[i] == '\t') {
+			w_cur += 8-(w_cur&7);
+		}
+		else {
+			++w_cur;
+		}
+		if (w_cur > w) {
+			return i;
+		}
+	}
+	return s->size;
 }
 
 size_t print_format(string* s, char** buf) {

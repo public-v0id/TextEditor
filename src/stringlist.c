@@ -35,7 +35,7 @@ stringlist* listConstructor(FILE* file) {
 			prev->next = cur;
 		}
 		cur->next = NULL;
-		setSizeImm(cur->str, strsz);	
+		setSizeImm(cur->str, strsz);
 		prev = cur;
 		for (int i = 0; i < strsz; ++i) {
 			tempbuf[i] = 0;

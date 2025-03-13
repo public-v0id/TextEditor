@@ -30,9 +30,13 @@ size_t nextNL(string* c, size_t cur);
 
 void backspace(string* s, size_t symb);
 
+void delete(string* s, size_t symb);
+
 size_t strsize(char* str, size_t buflen);
 
 size_t getCurWidth(string* s, size_t symb);
 
 size_t print_format(string* s, char** buf);
+
+size_t getCurSym(string* s, size_t w);
 #endif

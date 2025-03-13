@@ -198,13 +198,11 @@ int main(int argc, char** argv) {
 					if (ch == KEY_UP && curLine->prev != NULL) {
 						curLine = curLine->prev;
 						curNum--;
-						if (curSym > curLine->str->size-1) {
-							curSym = curLine->str->size-1;
-						}/*
 						if (curW > curLine->str->width-1) {
 							curW = curLine->str->width-1;
-						}*/
-						curW = getCurWidth(curLine->str, curSym);	
+						}
+						curSym = getCurSym(curLine->str, curW);	
+						curW = getCurWidth(curLine->str, curSym);
 						if (curR == 0) {
 							topLine = curLine;
 						}
@@ -213,17 +211,26 @@ int main(int argc, char** argv) {
 					if (ch == KEY_DOWN && curLine->next != NULL) {
 						curLine = curLine->next;
 						curNum++;
-						if (curSym > curLine->str->size) {
-							curSym = curLine->str->size;
-						} /*
 						if (curW > curLine->str->width-1) {
 							curW = curLine->str->width-1;
-						} */
+						}
+						curSym = getCurSym(curLine->str, curW);	
 						curW = getCurWidth(curLine->str, curSym);
 						if (curR > row-5) {
 							topLine = topLine->next;
 						}
 						continue;
+					}
+					if (ch == KEY_DC && curSym < curLine->str->size-1) {
+						changed = true;
+						delete(curLine->str, curSym);	
+						curW = getCurWidth(curLine->str, curSym);
+						continue;
+					}
+					if (ch == KEY_DC && curSym >= curLine->str->size-1 && curLine->next != NULL) {
+						changed = true;
+						curW = getCurWidth(curLine->str, curSym);
+						curLine = removeAndMergeLines(curLine->next);
 					}
 					if (ch == 263 && (curSym > 0 || curLine->prev != NULL)) {
 						changed = true;
@@ -232,10 +239,13 @@ int main(int argc, char** argv) {
 							curSym--;
 							curW = getCurWidth(curLine->str, curSym);
 							continue;
-						}
+						}	
 						curSym = curLine->prev->str->size-1;
-						curW = curLine->prev->str->width-1;
+						curW = getCurWidth(curLine->str, curSym);	
 						curLine = removeAndMergeLines(curLine);
+						if (curR <= 0) {
+							topLine = curLine;
+						}
 						continue;
 					}
 					if (ch == 27) {
@@ -244,6 +254,9 @@ int main(int argc, char** argv) {
 					}
 					if (ch == 10) {
 						curLine = createAfter(curLine, curSym);
+						if (curR > row-5) {
+							topLine = topLine->next;
+						}
 						curSym = 0;
 						curW = 0;
 						changed = true;
@@ -253,12 +266,7 @@ int main(int argc, char** argv) {
 						append(curLine->str, (char)ch, curSym);
 						++curSym;
 						changed = true;
-						if (ch == '\t') {
-							curW += 8-(curW&7);
-						}
-						else {
-							++curW;
-						}
+						curW = getCurWidth(curLine->str, curSym);	
 						continue;
 					}
 				}

@@ -195,6 +195,15 @@ int main(int argc, char** argv) {
 						curSym++;
 						continue;
 					}
+					if (ch == KEY_UP && curW >= col) {
+						curW -= col;
+						curSym = getCurSym(curLine->str, curW);
+						curW = getCurWidth(curLine->str, curSym);
+						if (curR == 0) {
+							topLine = curLine;
+						}
+						continue;
+					}
 					if (ch == KEY_UP && curLine->prev != NULL) {
 						curLine = curLine->prev;
 						curNum--;
@@ -205,6 +214,15 @@ int main(int argc, char** argv) {
 						curW = getCurWidth(curLine->str, curSym);
 						if (curR == 0) {
 							topLine = curLine;
+						}
+						continue;
+					}
+					if (ch == KEY_DOWN && curW+col <= curLine->str->width) {
+						curW += col;
+						curSym = getCurSym(curLine->str, curW);
+						curW = getCurWidth(curLine->str, curSym);
+						if (curR > row-5 && topLine->next != NULL) {
+							topLine = topLine->next;
 						}
 						continue;
 					}

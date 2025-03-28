@@ -119,6 +119,30 @@ int main(int argc, char** argv) {
 						im = TEXT;
 						continue;
 					}
+					if ((char)ch == 'r') {
+						FILE *f = fopen(argv[i], "r+");
+						stringlist* new_list;
+						if (f != NULL) {	
+							new_list = listConstructor(f);
+							tryClosing(f, argv[i]);
+						}
+						else {
+							new_list = listSingleConstructor(1);
+							if (new_list == NULL) {
+								fprintf(stderr, "Error! Couldn't create file");
+								continue;
+							}
+						}
+						slDestructor(list);
+						list = new_list;
+						curLine = list;
+						topLine = list;
+						curR = 0;
+						curC = 0;
+						curSym = 0;
+						curW = 0;
+						continue;
+					}
 					if ((char)ch == ':') {
 						im = COMMAND;
 						continue;

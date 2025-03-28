@@ -194,3 +194,14 @@ size_t print_format(string* s, char** buf) {
 	}
 	return cur;
 }
+
+size_t getTabs(string* s) {
+	size_t ans = 0;
+	for (size_t i = 0; i <= s->size; ++i) {
+		if (s->data[i] != '\t') {
+			return ans;
+		}
+		ans++;
+	}
+	return ans;	
+}

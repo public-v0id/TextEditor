@@ -257,9 +257,9 @@ int main(int argc, char** argv) {
 							curSym--;
 							curW = getCurWidth(curLine->str, curSym);
 							continue;
-						}	
+						}
 						curSym = curLine->prev->str->size-1;
-						curW = getCurWidth(curLine->str, curSym);	
+						curW = getCurWidth(curLine->prev->str, curSym);	
 						curLine = removeAndMergeLines(curLine);
 						if (curR <= 0) {
 							topLine = curLine;
@@ -271,12 +271,16 @@ int main(int argc, char** argv) {
 						continue;
 					}
 					if (ch == 10) {
+						size_t curTabs = getTabs(curLine->str);
 						curLine = createAfter(curLine, curSym);
+						for (size_t i = 0; i < curTabs; ++i) {
+							append(curLine->str, '\t', 0);
+						}
 						if (curR > row-5) {
 							topLine = topLine->next;
 						}
-						curSym = 0;
-						curW = 0;
+						curSym = curTabs;
+						curW = getCurWidth(curLine->str, curSym);
 						changed = true;
 						continue;
 					}

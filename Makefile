@@ -9,3 +9,6 @@ editor: src/main.c src/string.c
 
 clean:
 	rm -rf *.o editor
+
+install: editor
+	sudo cp editor /bin/

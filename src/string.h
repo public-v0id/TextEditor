@@ -39,4 +39,6 @@ size_t getCurWidth(string* s, size_t symb);
 size_t print_format(string* s, char** buf);
 
 size_t getCurSym(string* s, size_t w);
+
+size_t getTabs(string* s);
 #endif

@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ncurses.h>
+#include <stdbool.h>
+#include <time.h>
+#include <sys/time.h>
 
 size_t pow2(size_t val) {
 	size_t res = 1;
@@ -48,6 +51,7 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error! No filename provided!\n");
 		return 0;	
 	}
+	srand(time(NULL));
 	for (int i = 1; i < argc; ++i) {
 		FILE *f = fopen(argv[i], "r+");
 		stringlist* list;
@@ -62,6 +66,15 @@ int main(int argc, char** argv) {
 			}
 		}
 		initscr();
+		start_color();
+		for (int i = 1; i <= 16; ++i) {
+			int f = rand()&7;
+			int b = rand()&7;
+			while (f == b) {
+				f = rand()&7;
+			}
+			init_pair(i, f, b);
+		}
 		enum inputMode im = BASIC;
 		bool active = true;
 		int row, col, curR = 0, curC = 0;
@@ -72,6 +85,12 @@ int main(int argc, char** argv) {
 		string* command = constructor(6);
 		size_t comSymb = 0;
 		bool changed = false;
+		bool colored = false;
+		bool prevalt = false;
+		printf("%d", prevalt);
+		struct timespec rawtime;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &rawtime);
+		int npressed = 0;
 		while (active) {
 			getmaxyx(stdscr, row, col);
 			col += 0;
@@ -83,7 +102,13 @@ int main(int argc, char** argv) {
 			while (iter != NULL && rowsPrinted < row-1) {
 				char* prbuf = NULL;
 				print_format(iter->str, &prbuf);
+				if (colored) {
+					attron(COLOR_PAIR(iter->color));
+				}
 				printw(prbuf);
+				if (colored) {
+					attroff(COLOR_PAIR(iter->color));
+				}
 				if (prbuf != NULL) {
 					free(prbuf);
 				}
@@ -115,6 +140,35 @@ int main(int argc, char** argv) {
 				case BASIC: {
 					noecho();
 					int ch = getch();
+					struct timespec curtime;
+					clock_gettime(CLOCK_MONOTONIC_RAW, &curtime);
+					if ((curtime.tv_sec - rawtime.tv_sec)*1000+(curtime.tv_nsec - rawtime.tv_nsec)/1000000 > 60000) {
+						rawtime = curtime;
+						npressed = 0;
+					}
+					else {
+						++npressed;
+					}
+					if (ch == 27) {
+						prevalt = true;
+						continue;
+					}
+					if (npressed >= 11) {
+						if (!colored) {
+							int total = 0;
+							stringlist* iter = list;
+							while (iter != NULL) {
+								iter->color = (rand()&15)+1;
+								iter = iter->next;
+								++total;
+							}
+							shuffle(list, total);
+						}
+						colored = !colored;
+						npressed = 0;
+						continue;
+					}
+					prevalt = false;
 					if ((char)ch == 'i') {
 						im = TEXT;
 						continue;
@@ -146,7 +200,7 @@ int main(int argc, char** argv) {
 					if ((char)ch == ':') {
 						im = COMMAND;
 						continue;
-					}
+					}	
 					break;
 				}
 				case COMMAND: {

@@ -121,3 +121,31 @@ int writeList(stringlist* list, FILE* f) {
 	}
 	return 0;
 }
+
+void shuffle(stringlist* list, int n) {
+	if (n == 1) {
+		return;
+	}
+	for (int i = 0; i < n; ++i) {
+		int f = rand()%n;
+		int s = rand()%n;
+		while (f == s) {
+			f = rand()%n;
+		}
+		stringlist* first = list;
+		stringlist* second = list;
+		stringlist* iter = list;
+		for (int i = 0; i < f || i < s || i < n; ++i) {
+			if (i == f) {
+				first = iter;
+			}
+			if (i == s) {
+				second = iter;
+			}
+			iter = iter->next;
+		}
+		string* h = first->str;
+		first->str = second->str;
+		second->str = h;
+	}
+}
